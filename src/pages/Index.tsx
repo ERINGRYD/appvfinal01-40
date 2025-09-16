@@ -24,6 +24,20 @@ const IndexContent = () => {
   return <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="planner" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Planner
+            </TabsTrigger>
+            <TabsTrigger value="statistics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Estatísticas
+            </TabsTrigger>
+          </TabsList>
           
           <TabsContent value="dashboard" className="mt-0">
             <Dashboard studySessions={studySessions} subjects={subjects} studyPlan={studyPlan} examDate={examDate} selectedExam={selectedExam} />
