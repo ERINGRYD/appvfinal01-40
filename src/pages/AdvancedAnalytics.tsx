@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
+
 import { ProductivityReports } from '@/components/analytics/ProductivityReports';
 import { StudyPatterns } from '@/components/analytics/StudyPatterns';
 import { InsightsPanel } from '@/components/analytics/InsightsPanel';
@@ -177,12 +177,8 @@ export default function AdvancedAnalytics() {
         </div>
 
         {/* Main Analytics Tabs */}
-        <Tabs defaultValue="heatmap" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-            <TabsTrigger value="heatmap" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Heatmap</span>
-            </TabsTrigger>
+        <Tabs defaultValue="reports" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Relatórios</span>
@@ -196,10 +192,6 @@ export default function AdvancedAnalytics() {
               <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="heatmap" className="space-y-6">
-            <ActivityHeatmap sessions={sessions} />
-          </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
             <ProductivityReports sessions={sessions} metrics={metrics} />

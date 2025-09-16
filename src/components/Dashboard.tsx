@@ -6,6 +6,7 @@ import { Calendar, Clock, Target, BookOpen, TrendingUp, CheckCircle2 } from 'luc
 import { StudySession, StudySubject, StudyPlan } from '@/types/study';
 import { differenceInDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
 
 interface DashboardProps {
   studySessions: StudySession[];
@@ -232,6 +233,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Heatmap */}
+      <ActivityHeatmap sessions={studySessions} />
 
       {/* Recent Sessions */}
       {studySessions.length > 0 && (
