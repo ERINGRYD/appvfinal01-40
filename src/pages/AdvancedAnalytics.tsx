@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
 import { ProductivityReports } from '@/components/analytics/ProductivityReports';
 import { StudyPatterns } from '@/components/analytics/StudyPatterns';
 import { InsightsPanel } from '@/components/analytics/InsightsPanel';
+import Statistics from '@/components/Statistics';
 import { StudySession } from '@/types/study';
 import { PerformanceMetric } from '@/db/crud/performanceMetrics';
 import { loadStudySessionsData } from '@/utils/sqlitePersistence';
 import { loadPerformanceMetrics } from '@/db/crud/performanceMetrics';
+import { useStudyContext } from '@/contexts/StudyContext';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -18,7 +19,8 @@ import {
   Calendar,
   Clock,
   Target,
-  Zap
+  Zap,
+  PieChart
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +29,8 @@ export default function AdvancedAnalytics() {
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [targetExamDate, setTargetExamDate] = useState<Date | undefined>();
+  
+  const { subjects } = useStudyContext();
 
   useEffect(() => {
     loadData();
@@ -177,8 +181,12 @@ export default function AdvancedAnalytics() {
         </div>
 
         {/* Main Analytics Tabs */}
-        <Tabs defaultValue="reports" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="statistics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+            <TabsTrigger value="statistics" className="flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Estatísticas</span>
+            </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Relatórios</span>
@@ -192,6 +200,10 @@ export default function AdvancedAnalytics() {
               <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="statistics" className="space-y-6">
+            <Statistics studySessions={sessions} subjects={subjects} />
+          </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
             <ProductivityReports sessions={sessions} metrics={metrics} />
