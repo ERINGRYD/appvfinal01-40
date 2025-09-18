@@ -4,10 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LayoutDashboard, BookOpen } from 'lucide-react';
 import StudyPlanner from '@/components/StudyPlanner';
 import Dashboard from '@/components/Dashboard';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { useStudyContext } from '@/contexts/StudyContext';
 const IndexContent = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { showOnboarding, completeOnboarding, skipOnboarding } = useOnboarding();
   const {
     studySessions,
     studyPlan,
@@ -20,6 +23,14 @@ const IndexContent = () => {
     }
   }, [location.state]);
   return <div className="min-h-screen bg-background">
+      {/* Onboarding Tour */}
+      {showOnboarding && (
+        <OnboardingTour 
+          onComplete={completeOnboarding}
+          onSkip={skipOnboarding}
+        />
+      )}
+      
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">

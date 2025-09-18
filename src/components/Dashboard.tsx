@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -7,6 +7,11 @@ import { StudySession, StudySubject, StudyPlan } from '@/types/study';
 import { differenceInDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
+import { ActionableInsights } from '@/components/insights/ActionableInsights';
+import { QuickActions } from '@/components/insights/QuickActions';
+import { SmartReviewWidget } from '@/components/insights/SmartReviewWidget';
+import { generateInsights } from '@/utils/insightsEngine';
+import { loadPerformanceMetrics } from '@/db/crud/performanceMetrics';
 
 interface DashboardProps {
   studySessions: StudySession[];
@@ -23,6 +28,24 @@ const Dashboard: React.FC<DashboardProps> = ({
   examDate, 
   selectedExam 
 }) => {
+  const [insights, setInsights] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadInsights();
+  }, [studySessions]);
+
+  const loadInsights = async () => {
+    try {
+      const metrics = await loadPerformanceMetrics();
+      const generatedInsights = generateInsights(studySessions, metrics);
+      setInsights(generatedInsights);
+    } catch (error) {
+      console.error('Error loading insights:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const getTodayStats = () => {
     const today = new Date().toDateString();
     const todaySessions = studySessions.filter(session => 
@@ -127,6 +150,27 @@ const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Insights and Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <ActionableInsights 
+          insights={insights}
+          maxInsights={3}
+        />
+        
+        <QuickActions 
+          sessions={studySessions}
+          onStartReview={() => console.log('Start Review')}
+          onStartSession={() => console.log('Start Session')}
+          onViewAnalytics={() => console.log('View Analytics')}
+        />
+        
+        <SmartReviewWidget 
+          sessions={studySessions}
+          onStartReview={() => console.log('Start Smart Review')}
+          onConfigureReviews={() => console.log('Configure Reviews')}
+        />
       </div>
 
       {/* Progress by Subject */}
