@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Configuration from "./pages/Configuration";
 import StudySessionPage from "./pages/StudySessionPage";
 import QuestionsManager from "./pages/QuestionsManager";
+import SimulatedExam from "./pages/SimulatedExam";
 import BattleFieldPage from "./pages/BattleFieldPage";
 import GamificationPage from "./pages/GamificationPage";
 import AdvancedAnalytics from "./pages/AdvancedAnalytics";
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/configuration" element={<Configuration />} />
                   <Route path="/study-session" element={<StudySessionPage />} />
                   <Route path="/questions" element={<QuestionsManager />} />
+                  <Route path="/simulados" element={<SimulatedExam />} />
                   <Route path="/battle" element={<BattleFieldPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/analytics" element={<AdvancedAnalytics />} />
