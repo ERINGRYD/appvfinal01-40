@@ -23,6 +23,7 @@ interface AddQuestionModalProps {
 }
 
 export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionAdded }: AddQuestionModalProps) {
+  const [questionType, setQuestionType] = useState<'multiple_choice' | 'flashcard'>('multiple_choice'); // New state for question type
   const [formData, setFormData] = useState<QuestionFormData>({
     title: '',
     content: '',
@@ -39,7 +40,8 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
     examiningBoard: '',
     position: '',
     examYear: '',
-    institution: ''
+    institution: '',
+    questionType: 'multiple_choice'
   });
   
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
@@ -67,6 +69,14 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
       }
     }
   }, [selectedSubjectId, subjects]);
+
+  // Update form data when question type changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      questionType
+    }));
+  }, [questionType]);
 
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
   const availableTopics = selectedSubject?.topics || [];
@@ -122,59 +132,108 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
       return;
     }
 
-    // Find correct answer from options
-    const correctOption = formData.options.find(option => option.isCorrect);
-    const correctAnswer = correctOption ? correctOption.content : formData.correctAnswer;
+    // Validation based on question type
+    if (questionType === 'multiple_choice') {
+      // Find correct answer from options
+      const correctOption = formData.options.find(option => option.isCorrect);
+      const correctAnswer = correctOption ? correctOption.content : formData.correctAnswer;
 
-    if (!correctAnswer.trim()) {
-      toast({
-        title: "Erro",
-        description: "Marque a alternativa correta",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Create question in database
-      const questionId = createQuestion(
-        selectedTopicId,
-        formData.title,
-        formData.content,
-        correctAnswer,
-        formData.options.length > 0 && formData.options.some(opt => opt.content.trim()) 
-          ? formData.options.filter(opt => opt.content.trim())
-          : undefined,
-        formData.explanation || undefined,
-        formData.difficulty as Difficulty,
-        formData.tags,
-        selectedImages,
-        formData.examiningBoard || undefined,
-        formData.position || undefined,
-        formData.examYear || undefined,
-        formData.institution || undefined
-      );
-
-      // Topic will be marked as enemy via database trigger
-
-      toast({
-        title: "Sucesso",
-        description: "Questão criada com sucesso!"
-      });
-
-      if (onQuestionAdded) {
-        onQuestionAdded();
+      if (!correctAnswer.trim()) {
+        toast({
+          title: "Erro",
+          description: "Marque a alternativa correta",
+          variant: "destructive"
+        });
+        return;
       }
 
-      resetForm();
-      onClose();
-    } catch (error) {
-      console.error('Error creating question:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar questão",
-        variant: "destructive"
-      });
+      try {
+        // Create multiple choice question in database
+        const questionId = createQuestion(
+          selectedTopicId,
+          formData.title,
+          formData.content,
+          correctAnswer,
+          formData.options.length > 0 && formData.options.some(opt => opt.content.trim()) 
+            ? formData.options.filter(opt => opt.content.trim())
+            : undefined,
+          formData.explanation || undefined,
+          formData.difficulty as Difficulty,
+          formData.tags,
+          selectedImages,
+          formData.examiningBoard || undefined,
+          formData.position || undefined,
+          formData.examYear || undefined,
+          formData.institution || undefined
+        );
+
+        toast({
+          title: "Sucesso",
+          description: "Questão criada com sucesso!"
+        });
+
+        if (onQuestionAdded) {
+          onQuestionAdded();
+        }
+
+        resetForm();
+        onClose();
+      } catch (error) {
+        console.error('Error creating question:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar questão",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Flashcard validation - answer is required
+      if (!formData.correctAnswer?.trim()) {
+        toast({
+          title: "Erro",
+          description: "A resposta do flashcard é obrigatória",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      try {
+        // Create flashcard question in database
+        const questionId = createQuestion(
+          selectedTopicId,
+          formData.title,
+          formData.content,
+          formData.correctAnswer,
+          undefined, // No options for flashcards
+          formData.explanation || undefined,
+          formData.difficulty as Difficulty,
+          formData.tags,
+          selectedImages,
+          formData.examiningBoard || undefined,
+          formData.position || undefined,
+          formData.examYear || undefined,
+          formData.institution || undefined
+        );
+
+        toast({
+          title: "Sucesso",
+          description: "Flashcard criado com sucesso!"
+        });
+
+        if (onQuestionAdded) {
+          onQuestionAdded();
+        }
+
+        resetForm();
+        onClose();
+      } catch (error) {
+        console.error('Error creating flashcard:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar flashcard",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -216,7 +275,8 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
       examiningBoard: '',
       position: '',
       examYear: '',
-      institution: ''
+      institution: '',
+      questionType: questionType
     });
     setNewTag('');
     setSelectedImages([]);
@@ -228,14 +288,39 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-study-primary" />
-            Nova Questão
+            {questionType === 'flashcard' ? 'Novo Flashcard' : 'Nova Questão'}
           </DialogTitle>
           <DialogDescription>
-            Adicione uma nova questão ao banco de dados
+            {questionType === 'flashcard' 
+              ? 'Adicione um novo flashcard para revisão espaçada'
+              : 'Adicione uma nova questão ao banco de dados'
+            }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Question Type Selection */}
+          <div className="space-y-2">
+            <Label>Tipo de Questão</Label>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant={questionType === 'multiple_choice' ? 'default' : 'outline'}
+                onClick={() => setQuestionType('multiple_choice')}
+                className="flex-1"
+              >
+                Múltipla Escolha
+              </Button>
+              <Button
+                type="button"
+                variant={questionType === 'flashcard' ? 'default' : 'outline'}
+                onClick={() => setQuestionType('flashcard')}
+                className="flex-1"
+              >
+                Flashcard
+              </Button>
+            </div>
+          </div>
           {/* Seleção de Matéria e Tema */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -282,12 +367,14 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
           {/* Título e Dificuldade */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="title">Título da Questão</Label>
+              <Label htmlFor="title">
+                {questionType === 'flashcard' ? 'Pergunta (Frente do Card)' : 'Título da Questão'}
+              </Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Ex: Cálculo de Derivadas"
+                placeholder={questionType === 'flashcard' ? 'Ex: O que é uma derivada?' : 'Ex: Cálculo de Derivadas'}
                 required
               />
             </div>
@@ -357,45 +444,67 @@ export function AddQuestionModal({ isOpen, onClose, topic, subjects, onQuestionA
 
           {/* Conteúdo da Questão */}
           <div className="space-y-2">
-            <Label htmlFor="content">Enunciado da Questão</Label>
+            <Label htmlFor="content">
+              {questionType === 'flashcard' ? 'Detalhes da Pergunta (Opcional)' : 'Enunciado da Questão'}
+            </Label>
             <Textarea
               id="content"
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Descreva o enunciado completo da questão..."
+              placeholder={
+                questionType === 'flashcard' 
+                  ? 'Detalhes adicionais da pergunta (opcional)...'
+                  : 'Descreva o enunciado completo da questão...'
+              }
               rows={4}
-              required
+              required={questionType === 'multiple_choice'}
             />
           </div>
 
-          {/* Alternativas */}
-          <div className="space-y-4">
-            <Label>Alternativas</Label>
-            <div className="space-y-3">
-              {formData.options.map((option, index) => (
-                <Card key={index} className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="correctAnswer"
-                        checked={option.isCorrect}
-                        onChange={(e) => handleOptionChange(index, 'isCorrect', e.target.checked)}
-                        className="text-study-primary"
-                      />
-                      <Label className="font-medium">{option.label})</Label>
-                    </div>
-                    <Input
-                      value={option.content}
-                      onChange={(e) => handleOptionChange(index, 'content', e.target.value)}
-                      placeholder={`Conteúdo da alternativa ${option.label}`}
-                      className="flex-1"
-                    />
-                  </div>
-                </Card>
-              ))}
+          {/* Answer/Response - Different for flashcard vs multiple choice */}
+          {questionType === 'flashcard' ? (
+            // Flashcard Answer
+            <div className="space-y-2">
+              <Label htmlFor="answer">Resposta (Verso do Card)</Label>
+              <Textarea
+                id="answer"
+                value={formData.correctAnswer}
+                onChange={(e) => setFormData(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                placeholder="Digite a resposta completa do flashcard..."
+                rows={4}
+                required
+              />
             </div>
-          </div>
+          ) : (
+            // Multiple Choice Options
+            <div className="space-y-4">
+              <Label>Alternativas</Label>
+              <div className="space-y-3">
+                {formData.options.map((option, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="correctAnswer"
+                          checked={option.isCorrect}
+                          onChange={(e) => handleOptionChange(index, 'isCorrect', e.target.checked)}
+                          className="text-study-primary"
+                        />
+                        <Label className="font-medium">{option.label})</Label>
+                      </div>
+                      <Input
+                        value={option.content}
+                        onChange={(e) => handleOptionChange(index, 'content', e.target.value)}
+                        placeholder={`Conteúdo da alternativa ${option.label}`}
+                        className="flex-1"
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Explicação */}
           <div className="space-y-2">

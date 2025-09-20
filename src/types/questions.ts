@@ -16,6 +16,24 @@ export interface Topic {
   priority?: number;
 }
 
+export interface FlashcardTopic {
+  id: string;
+  name: string;
+  subjectId: string;
+  questions: any[]; // Can store both Question[] or FlashcardQuestion[]
+  isEnemy: boolean;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  priority?: number;
+}
+
+export interface FlashcardSubject {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  topics: FlashcardTopic[];
+}
+
 export interface Question {
   id: string;
   topicId: string;
@@ -31,6 +49,7 @@ export interface Question {
   position?: string;
   examYear?: string;
   institution?: string;
+  questionType?: 'multiple_choice' | 'flashcard'; // New field for question type
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,4 +74,5 @@ export interface QuestionFormData {
   position?: string;
   examYear?: string;
   institution?: string;
+  questionType?: 'multiple_choice' | 'flashcard'; // New field for question type
 }

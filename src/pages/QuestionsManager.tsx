@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Filter, Target, AlertTriangle, BookOpen, Users, FileText, Upload, Download } from 'lucide-react';
+import { Search, Plus, Filter, Target, AlertTriangle, BookOpen, Users, FileText, Upload, Download, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QuestionsSection } from '@/components/questions/QuestionsSection';
+import { FlashcardsSection } from '@/components/flashcards/FlashcardsSection';
 import { AddQuestionModal } from '@/components/questions/AddQuestionModal';
 import { ImportQuestionsModal } from '@/components/questions/ImportQuestionsModal';
 import { ExportQuestionsModal } from '@/components/questions/ExportQuestionsModal';
-import { Subject, Topic, Question } from '@/types/questions';
+import { Subject, Topic, Question, FlashcardSubject } from '@/types/questions';
+import { FlashcardQuestion } from '@/types/flashcard';
 import { useStudyContext } from '@/contexts/StudyContext';
 import { getQuestionsByTopic, deleteQuestion } from '@/db/crud/questions';
+import { getFlashcardsByTopic, deleteFlashcard } from '@/db/crud/flashcards';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,6 +26,8 @@ export default function QuestionsManager() {
   
   // Convert StudySubjects to Question subjects format and manage questions
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [flashcardSubjects, setFlashcardSubjects] = useState<FlashcardSubject[]>([]);
+  const [activeTab, setActiveTab] = useState<'questions' | 'flashcards'>('questions');
 
   // Initialize and update subjects when studySubjects change
   useEffect(() => {
@@ -62,7 +67,32 @@ export default function QuestionsManager() {
       setSubjects(convertedSubjects);
     };
 
+    const loadFlashcardsForSubjects = () => {
+      const convertedSubjects = studySubjects.map(studySubject => ({
+        id: studySubject.id,
+        name: studySubject.name,
+        description: `Flashcards de ${studySubject.name}`,
+        color: studySubject.color || 'hsl(var(--study-primary))',
+        topics: (studySubject.topics || []).map(topic => {
+          // Load flashcards from database for each topic
+          const flashcards = getFlashcardsByTopic(topic.id);
+          return {
+            id: topic.id,
+            name: topic.name,
+            subjectId: studySubject.id,
+            questions: flashcards, // Store flashcards in questions field for compatibility
+            isEnemy: flashcards.length > 0,
+            difficulty: 'medium' as const,
+            priority: 1
+          };
+        })
+      }));
+      
+      setFlashcardSubjects(convertedSubjects);
+    };
+
     loadQuestionsForSubjects();
+    loadFlashcardsForSubjects();
   }, [studySubjects]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
@@ -76,7 +106,9 @@ export default function QuestionsManager() {
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const filteredSubjects = useMemo(() => {
-    return subjects.filter(subject => {
+    const currentSubjects = activeTab === 'questions' ? subjects : flashcardSubjects;
+    
+    return currentSubjects.filter(subject => {
       const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         subject.topics.some(topic => topic.name.toLowerCase().includes(searchTerm.toLowerCase()));
       
@@ -92,22 +124,24 @@ export default function QuestionsManager() {
         return matchesDifficulty && matchesEnemyFilter;
       })
     })).filter(subject => subject.topics.length > 0);
-  }, [subjects, searchTerm, selectedSubject, selectedDifficulty, showEnemiesOnly]);
+  }, [subjects, flashcardSubjects, searchTerm, selectedSubject, selectedDifficulty, showEnemiesOnly, activeTab]);
 
   const stats = useMemo(() => {
-    const totalTopics = subjects.reduce((acc, subject) => acc + subject.topics.length, 0);
-    const totalEnemies = subjects.reduce((acc, subject) => 
+    const currentSubjects = activeTab === 'questions' ? subjects : flashcardSubjects;
+    const totalTopics = currentSubjects.reduce((acc, subject) => acc + subject.topics.length, 0);
+    const totalEnemies = currentSubjects.reduce((acc, subject) => 
       acc + subject.topics.filter(topic => topic.isEnemy).length, 0
     );
-    const totalQuestions = subjects.reduce((acc, subject) => 
+    const totalItems = currentSubjects.reduce((acc, subject) => 
       acc + subject.topics.reduce((topicAcc, topic) => topicAcc + topic.questions.length, 0), 0
     );
     
-    return { totalTopics, totalEnemies, totalQuestions };
-  }, [subjects]);
+    return { totalTopics, totalEnemies, totalQuestions: totalItems };
+  }, [subjects, flashcardSubjects, activeTab]);
 
   const handleAddQuestion = (topicId: string) => {
-    const topic = subjects
+    const currentSubjects = activeTab === 'questions' ? subjects : flashcardSubjects;
+    const topic = currentSubjects
       .flatMap(s => s.topics)
       .find(t => t.id === topicId);
     
@@ -155,7 +189,32 @@ export default function QuestionsManager() {
       setSubjects(convertedSubjects);
     };
 
+    const loadFlashcardsForSubjects = () => {
+      const convertedSubjects = studySubjects.map(studySubject => ({
+        id: studySubject.id,
+        name: studySubject.name,
+        description: `Flashcards de ${studySubject.name}`,
+        color: studySubject.color || 'hsl(var(--study-primary))',
+        topics: (studySubject.topics || []).map(topic => {
+          // Load flashcards from database for each topic
+          const flashcards = getFlashcardsByTopic(topic.id);
+          return {
+            id: topic.id,
+            name: topic.name,
+            subjectId: studySubject.id,
+            questions: flashcards, // Store flashcards in questions field for compatibility
+            isEnemy: flashcards.length > 0,
+            difficulty: 'medium' as const,
+            priority: 1
+          };
+        })
+      }));
+      
+      setFlashcardSubjects(convertedSubjects);
+    };
+
     loadQuestionsForSubjects();
+    loadFlashcardsForSubjects();
   };
 
   const handleViewQuestion = (q: Question) => {
@@ -164,17 +223,29 @@ export default function QuestionsManager() {
   };
 
   const handleDeleteQuestion = (id: string) => {
-    const ok = deleteQuestion(id);
+    const isFlashcard = activeTab === 'flashcards';
+    const ok = isFlashcard ? deleteFlashcard(id) : deleteQuestion(id);
+    
     if (ok) {
-      toast({ title: 'Sucesso', description: 'Questão excluída com sucesso.' });
+      toast({ 
+        title: 'Sucesso', 
+        description: `${isFlashcard ? 'Flashcard' : 'Questão'} excluído(a) com sucesso.` 
+      });
       handleQuestionAdded();
     } else {
-      toast({ title: 'Erro', description: 'Não foi possível excluir a questão.', variant: 'destructive' });
+      toast({ 
+        title: 'Erro', 
+        description: `Não foi possível excluir o ${isFlashcard ? 'flashcard' : 'questão'}.`, 
+        variant: 'destructive' 
+      });
     }
   };
 
-  const handleEditQuestion = (q: Question) => {
-    toast({ title: 'Em breve', description: 'Edição de questões será adicionada em breve.' });
+  const handleEditQuestion = (q: Question | FlashcardQuestion) => {
+    toast({ 
+      title: 'Em breve', 
+      description: `Edição de ${activeTab === 'flashcards' ? 'flashcards' : 'questões'} será adicionada em breve.` 
+    });
   };
 
   return (
@@ -186,16 +257,16 @@ export default function QuestionsManager() {
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
                 <Target className="h-8 w-8 text-study-primary" />
-                Gestão de Questões
+                Gestão de Questões e Flashcards
               </h1>
               <p className="text-muted-foreground mt-1">
-                Gerencie questões por tema e identifique seus inimigos
+                Gerencie questões e flashcards por tema e identifique seus inimigos
               </p>
             </div>
             <div className="flex gap-2">
               <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Nova Questão
+                {activeTab === 'flashcards' ? 'Novo Flashcard' : 'Nova Questão'}
               </Button>
               <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="gap-2">
                 <Upload className="h-4 w-4" />
@@ -246,7 +317,9 @@ export default function QuestionsManager() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{stats.totalQuestions}</p>
-                    <p className="text-sm text-muted-foreground">Total de Questões</p>
+                    <p className="text-sm text-muted-foreground">
+                      {activeTab === 'flashcards' ? 'Total de Flashcards' : 'Total de Questões'}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -329,44 +402,97 @@ export default function QuestionsManager() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto">
-        <div className="space-y-6">
-          {filteredSubjects.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {subjects.length === 0 ? 'Nenhuma matéria encontrada' : 'Nenhum resultado encontrado'}
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  {subjects.length === 0 
-                    ? 'Você precisa criar um plano de estudos primeiro. Vá para a página inicial e configure suas matérias e tópicos.'
-                    : 'Tente ajustar os filtros ou criar uma nova questão'
-                  }
-                </p>
-                {subjects.length === 0 && (
-                  <Button 
-                    onClick={() => window.location.href = '/'} 
-                    className="gap-2"
-                  >
-                    <Target className="h-4 w-4" />
-                    Ir para Plano de Estudos
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            filteredSubjects.map(subject => (
-              <QuestionsSection
-                key={subject.id}
-                subject={subject}
-                onAddQuestion={handleAddQuestion}
-                onViewQuestion={handleViewQuestion}
-                onEditQuestion={handleEditQuestion}
-                onDeleteQuestion={handleDeleteQuestion}
-              />
-            ))
-          )}
-        </div>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'questions' | 'flashcards')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="questions" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Questões
+            </TabsTrigger>
+            <TabsTrigger value="flashcards" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Flashcards
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="questions" className="space-y-6 mt-6">
+            {filteredSubjects.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {subjects.length === 0 ? 'Nenhuma matéria encontrada' : 'Nenhum resultado encontrado'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {subjects.length === 0 
+                      ? 'Você precisa criar um plano de estudos primeiro. Vá para a página inicial e configure suas matérias e tópicos.'
+                      : 'Tente ajustar os filtros ou criar uma nova questão'
+                    }
+                  </p>
+                  {subjects.length === 0 && (
+                    <Button 
+                      onClick={() => window.location.href = '/'} 
+                      className="gap-2"
+                    >
+                      <Target className="h-4 w-4" />
+                      Ir para Plano de Estudos
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSubjects.map(subject => (
+                <QuestionsSection
+                  key={subject.id}
+                  subject={subject}
+                  onAddQuestion={handleAddQuestion}
+                  onViewQuestion={handleViewQuestion}
+                  onEditQuestion={handleEditQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                />
+              ))
+            )}
+          </TabsContent>
+          
+          <TabsContent value="flashcards" className="space-y-6 mt-6">
+            {filteredSubjects.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Zap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {flashcardSubjects.length === 0 ? 'Nenhuma matéria encontrada' : 'Nenhum flashcard encontrado'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {flashcardSubjects.length === 0 
+                      ? 'Você precisa criar um plano de estudos primeiro. Vá para a página inicial e configure suas matérias e tópicos.'
+                      : 'Tente ajustar os filtros ou criar um novo flashcard'
+                    }
+                  </p>
+                  {flashcardSubjects.length === 0 && (
+                    <Button 
+                      onClick={() => window.location.href = '/'} 
+                      className="gap-2"
+                    >
+                      <Target className="h-4 w-4" />
+                      Ir para Plano de Estudos
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSubjects.map(subject => (
+                <FlashcardsSection
+                  key={subject.id}
+                  subject={subject as any}
+                  flashcards={subject.topics.flatMap(t => t.questions as any[])}
+                  onAddFlashcard={handleAddQuestion}
+                  onViewFlashcard={handleViewQuestion as any}
+                  onEditFlashcard={handleEditQuestion as any}
+                  onDeleteFlashcard={handleDeleteQuestion}
+                />
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <AddQuestionModal
@@ -376,21 +502,21 @@ export default function QuestionsManager() {
           setSelectedTopic(null);
         }}
         topic={selectedTopic}
-        subjects={subjects}
+        subjects={activeTab === 'questions' ? subjects : flashcardSubjects}
         onQuestionAdded={handleQuestionAdded}
       />
 
       <ImportQuestionsModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        subjects={subjects}
+        subjects={activeTab === 'questions' ? subjects : flashcardSubjects}
         onQuestionsImported={handleQuestionAdded}
       />
 
       <ExportQuestionsModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        subjects={subjects}
+        subjects={activeTab === 'questions' ? subjects : flashcardSubjects}
       />
     </div>
   );
