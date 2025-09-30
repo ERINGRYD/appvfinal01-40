@@ -14,6 +14,7 @@ import StudySessionPage from "./pages/StudySessionPage";
 import QuestionsManager from "./pages/QuestionsManager";
 import SimulatedExam from "./pages/SimulatedExam";
 import BattleFieldPage from "./pages/BattleFieldPage";
+import ColiseumPage from "./pages/ColiseumPage";
 import GamificationPage from "./pages/GamificationPage";
 import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
                   <Route path="/questions" element={<QuestionsManager />} />
                   <Route path="/simulados" element={<SimulatedExam />} />
                   <Route path="/battle" element={<BattleFieldPage />} />
+                  <Route path="/coliseu" element={<ColiseumPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/analytics" element={<AdvancedAnalytics />} />
                   {import.meta.env.DEV && DatabaseViewer && (

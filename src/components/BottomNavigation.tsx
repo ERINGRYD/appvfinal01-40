@@ -10,7 +10,8 @@ import {
   Target,
   Sword,
   Gamepad2,
-  FileText
+  FileText,
+  Landmark
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -57,6 +58,11 @@ const BottomNavigation = () => {
       path: '/battle',
       icon: Sword,
       label: 'Batalha'
+    },
+    {
+      path: '/coliseu',
+      icon: Landmark,
+      label: 'Coliseu'
     },
     {
       path: '/gamification',
